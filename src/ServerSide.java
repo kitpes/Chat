@@ -12,35 +12,68 @@ public class ServerSide
 	{
 		try 
 		{
-			ServerSocket serverSocket = new ServerSocket(1234);
-			Socket incoming = serverSocket.accept();
-			
-			try 
-			{
-				InputStream inStream = incoming.getInputStream();
-				OutputStream outStream = incoming.getOutputStream();
-				
-				Scanner in = new Scanner(inStream);
-				PrintWriter out = new PrintWriter(outStream, true);
-				
-				out.println("Hello! Enter EXIT to exit.");
-				
-				boolean done = false;
-				while (!done && in.hasNextLine())
-				{
-					String line = in.nextLine();
-					out.println("Echo: " + line);
-					if (line.trim().equals("EXIT")) done = true;
-				}
-			} 
-			finally 
-			{
-				incoming.close();
-			}
-		} 
-		catch (IOException e) 
-		{
-			e.printStackTrace();
+			int i = 1;
+            ServerSocket serverSocket = new ServerSocket(1234);
+
+            while (true)
+            {
+                Socket incoming = serverSocket.accept();
+                System.out.println("Spawning " + i);
+                Runnable r = new ThreadedEchoHandler(incoming, i);
+                Thread t = new Thread(r);
+                t.start();
+                i++;
+            }
+
+        }
+        catch (IOException e)
+        {
+            e.printStackTrace();
 		}
 	}
+}
+
+class ThreadedEchoHandler implements Runnable
+{
+    private Socket incoming;
+    private int counter;
+
+    public ThreadedEchoHandler(Socket i, int c)
+    {
+        incoming = i;
+        counter = c;
+    }
+
+    public void run()
+    {
+        try
+        {
+            try
+            {
+                InputStream inStream = incoming.getInputStream();
+                OutputStream outStream = incoming.getOutputStream();
+
+                Scanner in = new Scanner(inStream);
+                PrintWriter out = new PrintWriter(outStream, true);
+
+                out.println("Hello! Enter BYE to exit.");
+                boolean done = false;
+                while (!done &&in.hasNextLine())
+                {
+                    String line = in.nextLine();
+                    out.println("Echo: " + line);
+                    if (line.trim().equals("BYE"))
+                        done = true;
+                }
+            }
+            finally
+            {
+                incoming.close();
+            }
+        }
+        catch (IOException e)
+        {
+            e.printStackTrace();
+        }
+    }
 }
