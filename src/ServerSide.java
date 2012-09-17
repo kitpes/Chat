@@ -56,7 +56,6 @@ class ThreadedEchoHandler implements Runnable
                 Scanner in = new Scanner(inStream);
                 PrintWriter out = new PrintWriter(outStream, true);
 
-                out.println("Hello! Enter BYE to exit.");
                 boolean done = false;
                 while (!done &&in.hasNextLine())
                 {
