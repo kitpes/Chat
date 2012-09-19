@@ -4,6 +4,7 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.Scanner;
 
 public class ServerSide 
@@ -14,6 +15,7 @@ public class ServerSide
 		{
 			int i = 1;
             ServerSocket serverSocket = new ServerSocket(1234);
+            ArrayList<Runnable> connections = new ArrayList<Runnable>();
 
             while (true)
             {
@@ -21,9 +23,12 @@ public class ServerSide
                 System.out.println("Spawning " + i);
                 Runnable r = new ThreadedEchoHandler(incoming, i);
                 Thread t = new Thread(r);
+                connections.add(t);
+
                 t.start();
                 i++;
             }
+
 
         }
         catch (IOException e)
