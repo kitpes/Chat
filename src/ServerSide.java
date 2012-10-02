@@ -1,41 +1,109 @@
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketPermission;
 import java.util.ArrayList;
 import java.util.Scanner;
 
 public class ServerSide 
 {
-	public static void main(String[] args)
-	{
-		try 
-		{
-			int i = 1;
-            ServerSocket serverSocket = new ServerSocket(1234);
-            ArrayList<Runnable> connections = new ArrayList<Runnable>();
+    private ServerSocket ss;
+    private int port;
+    private Thread serverThread;
 
-            while (true)
+    public  ServerSide(int port) throws IOException
+    {
+        ss = new ServerSocket(port);
+        this.port = port;
+    }
+
+    void run()
+    {
+        serverThread = Thread.currentThread();
+        while (true)
+        {
+            Socket s = getNewConnection();
+            if(serverThread.isInterrupted())
             {
-                Socket incoming = serverSocket.accept();
-                System.out.println("Spawning " + i);
-                Runnable r = new ThreadedEchoHandler(incoming, i);
-                Thread t = new Thread(r);
-                connections.add(t);
-
-                t.start();
-                i++;
+                break;
             }
+            else if (s != null)
+            {
+                try
+                {
+                    final SocketProcessor processor = new SocketProcessor(s);
+                    final Thread thread = new Thread(processor);
+                    thread.setDaemon(true);
+                    thread.start();
+                    q.offer(processor);
+                }
+                catch (IOException e)
+                {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
 
+    private Socket getNewConnection()
+    {
+        Socket s = null;
+        try
+        {
+            s = ss.accept();
+        }
+        catch (IOException e)
+        {
+            shutDownServer();
+        }
+        return s;
+    }
 
+    private synchronized void shutDownServer()
+    {
+        for (SocketProcessor s : q)
+        {
+            s.close();
+        }
+        if (!ss.isClosed())
+        {
+            try
+            {
+                ss.close();
+            }
+            catch (IOException e)
+            {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public static void main(String[] args)
+	{
+        try
+        {
+            new ServerSide(1234);
         }
         catch (IOException e)
         {
             e.printStackTrace();
-		}
-	}
+        }
+    }
+
+    private class SocketProcessor implements Runnable
+    {
+        Socket s;
+        BufferedReader br;
+        BufferedWriter bw;
+
+        SocketProcessor(Socket socketParam) throws IOException
+        {
+            s = socketParam;
+            br = new BufferedReader(new InputStreamReader(s.getInputStream(), "UTF-8"));
+            bw = new BufferedWriter(new OutputStreamWriter(s.getOutputStream(), "UTF-8"));
+        }
+
+    }
 }
 
 class ThreadedEchoHandler implements Runnable
