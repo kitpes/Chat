@@ -1,12 +1,18 @@
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.Socket;
 import java.util.Scanner;
 
 public class ClientSide
 {
+    final Socket s;
+    final BufferedReader socketReader;
+    final BufferedWriter socketWriter;
+    final BufferedReader userInput;
+
+    public ClientSide(String host, int port) throws IOException
+    {
+        s = new Socket(host, port);
+    }
     public static void main(String[] args)
     {
         try

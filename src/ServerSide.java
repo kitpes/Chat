@@ -1,15 +1,15 @@
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.SocketPermission;
-import java.util.ArrayList;
-import java.util.Scanner;
+import java.util.concurrent.BlockingDeque;
+import java.util.concurrent.LinkedBlockingDeque;
 
 public class ServerSide 
 {
     private ServerSocket ss;
     private int port;
     private Thread serverThread;
+    private BlockingDeque<SocketProcessor> q = new LinkedBlockingDeque<SocketProcessor>();
 
     public  ServerSide(int port) throws IOException
     {
@@ -82,7 +82,7 @@ public class ServerSide
 	{
         try
         {
-            new ServerSide(1234);
+            new ServerSide(1234).run();
         }
         catch (IOException e)
         {
@@ -102,50 +102,85 @@ public class ServerSide
             br = new BufferedReader(new InputStreamReader(s.getInputStream(), "UTF-8"));
             bw = new BufferedWriter(new OutputStreamWriter(s.getOutputStream(), "UTF-8"));
         }
-
-    }
-}
-
-class ThreadedEchoHandler implements Runnable
-{
-    private Socket incoming;
-    private int counter;
-
-    public ThreadedEchoHandler(Socket i, int c)
-    {
-        incoming = i;
-        counter = c;
-    }
-
-    public void run()
-    {
-        try
+        public void run()
         {
-            try
+            while(!s.isClosed())
             {
-                InputStream inStream = incoming.getInputStream();
-                OutputStream outStream = incoming.getOutputStream();
-
-                Scanner in = new Scanner(inStream);
-                PrintWriter out = new PrintWriter(outStream, true);
-
-                boolean done = false;
-                while (!done &&in.hasNextLine())
+                String line = null;
+                try
                 {
-                    String line = in.nextLine();
-                    out.println("Echo: " + line);
-                    if (line.trim().equals("BYE"))
-                        done = true;
+                    line = br.readLine();
+                }
+                catch (IOException e)
+                {
+                    e.printStackTrace();
+                    close();
+                }
+
+                if(line == null)
+                {
+                    close();
+                }
+                else if ("Shutdown ".equals(line))
+                {
+                    serverThread.interrupt();
+                    try
+                    {
+                        new Socket("localhost", port);
+                    }
+                    catch (IOException e)
+                    {
+                        e.printStackTrace();
+                    }
+                    finally
+                    {
+                        shutDownServer();
+                    }
+                }
+                else
+                {
+                    for(SocketProcessor sp : q)
+                    {
+                        sp.send(line);
+                    }
                 }
             }
-            finally
+        }
+
+        public synchronized void send(String line)
+        {
+            try {
+                bw.write(line);
+                bw.write("\n");
+                bw.flush();
+            }
+            catch (IOException e)
             {
-                incoming.close();
+                e.printStackTrace();
+                close();
             }
         }
-        catch (IOException e)
+
+        public synchronized void close()
         {
-            e.printStackTrace();
+            q.remove(this);
+            if (!s.isClosed())
+            {
+                try
+                {
+                    s.close();
+                }
+                catch (IOException e)
+                {
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        protected void finalize() throws Throwable
+        {
+            super.finalize();
+            close();
         }
     }
 }
