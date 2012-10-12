@@ -1,7 +1,5 @@
-import javax.sound.midi.Receiver;
 import java.io.*;
 import java.net.Socket;
-import java.util.Scanner;
 
 public class ClientSide
 {
@@ -16,6 +14,7 @@ public class ClientSide
         socketReader = new BufferedReader(new InputStreamReader(s.getInputStream(), "UTF-8"));
         socketWriter = new BufferedWriter(new OutputStreamWriter(s.getOutputStream(), "UTF-8"));
         userInput = new BufferedReader(new InputStreamReader(System.in));
+
         new Thread(new Receiver()).start();
     }
 
@@ -41,6 +40,7 @@ public class ClientSide
             {
                 try
                 {
+                    socketWriter.write(userString);
                     socketWriter.write("\n");
                     socketWriter.flush();
                 }

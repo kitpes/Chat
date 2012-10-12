@@ -121,7 +121,7 @@ public class ServerSide
                 {
                     close();
                 }
-                else if ("Shutdown ".equals(line))
+                else if ("shutdown ".equals(line))
                 {
                     serverThread.interrupt();
                     try
